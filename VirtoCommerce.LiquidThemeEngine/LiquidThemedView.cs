@@ -69,6 +69,7 @@ namespace VirtoCommerce.LiquidThemeEngine
 
             //Add settings to context
             workContext.Settings = _liquidThemeEngine.GetSettings();
+            workContext.TemplateConfig = _liquidThemeEngine.GetTemplateConfig(_viewName);
 
             if (string.IsNullOrEmpty(_workContextAccessor.WorkContext.ErrorMessage))
             {
@@ -76,7 +77,8 @@ namespace VirtoCommerce.LiquidThemeEngine
             }
             var scriptObject = workContext.ToScriptObject();
 
-            var result = await _liquidThemeEngine.RenderTemplateByNameAsync(_viewName, scriptObject);
+            var viewToRender = workContext.TemplateConfig == null ? _viewName : "sections";
+            var result = await _liquidThemeEngine.RenderTemplateByNameAsync(viewToRender, scriptObject);
 
             // don't use layouts for partial views when masterViewName is not specified
             if (_isMainPage)

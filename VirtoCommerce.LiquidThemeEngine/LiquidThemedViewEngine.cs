@@ -39,10 +39,18 @@ namespace VirtoCommerce.LiquidThemeEngine
             //Do not handle without a set WorkContext
             if (_workContextAccessor.WorkContext != null)
             {
+                var settings = _themeEngine.ResolveTemplateSettingsPath(view);
+                if (!string.IsNullOrEmpty(settings))
+                {
+                    var sectionsPath = _themeEngine.ResolveTemplatePath("sections");
+                    return ViewEngineResult.Found(view,
+                        new LiquidThemedView(_workContextAccessor, _urlBuilder, _themeEngine, view, sectionsPath, isMainPage));
+                }
                 var path = _themeEngine.ResolveTemplatePath(view);
                 if (!string.IsNullOrEmpty(path))
                 {
-                    return ViewEngineResult.Found(view, new LiquidThemedView(_workContextAccessor, _urlBuilder, _themeEngine, view, path, isMainPage));
+                    return ViewEngineResult.Found(view,
+                        new LiquidThemedView(_workContextAccessor, _urlBuilder, _themeEngine, view, path, isMainPage));
                 }
                 searchedLocations = _themeEngine.DiscoveryPaths.ToArray();
             }

@@ -9,6 +9,8 @@ namespace VirtoCommerce.LiquidThemeEngine
     {
         IEnumerable<string> DiscoveryPaths { get; }
         string ResolveTemplatePath(string templateName);
+        string ResolveTemplateSettingsPath(string templateName);
+        Dictionary<string, object> GetTemplateConfig(string viewName);
         ValueTask<string> RenderTemplateByNameAsync(string templateName, object context);
         ValueTask<string> RenderTemplateAsync(string templateContent, string templatePath, object context);
         IDictionary<string, object> GetSettings(string defaultValue = null);

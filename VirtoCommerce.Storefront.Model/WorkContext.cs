@@ -279,6 +279,11 @@ namespace VirtoCommerce.Storefront.Model
         /// </summary>
         public IDictionary<string, object> Settings { get; set; }
 
+        /// <summary>
+        /// settings for current template
+        /// </summary>
+        public IDictionary<string, object> TemplateConfig { get; set; }
+
         public string Version { get; set; }
 
         #region GDPR consent

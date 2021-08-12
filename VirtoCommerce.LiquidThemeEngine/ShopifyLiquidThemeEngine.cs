@@ -43,6 +43,7 @@ namespace VirtoCommerce.LiquidThemeEngine
         private readonly LiquidThemeEngineOptions _options;
         private static readonly Regex _isLiquid = new Regex("[{}|]", RegexOptions.Compiled);
         private const string _liquidTemplateFormat = "{0}.liquid";
+        private const string _settingsTemplateFormat = "{0}.template";
         private readonly IWorkContextAccessor _workContextAccessor;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IStorefrontMemoryCache _memoryCache;
@@ -245,8 +246,21 @@ namespace VirtoCommerce.LiquidThemeEngine
             {
                 return null;
             }
+            return ResolveTemplatePathInternal(templateName, _liquidTemplateFormat);
+        }
 
-            var liquidTemplateFileName = string.Format(_liquidTemplateFormat, templateName);
+        public string ResolveTemplateSettingsPath(string templateName)
+        {
+            if (WorkContext.CurrentStore == null)
+            {
+                return null;
+            }
+            return ResolveTemplatePathInternal(templateName, _settingsTemplateFormat);
+        }
+
+        private string ResolveTemplatePathInternal(string templateName, string fileFormat)
+        {
+            var liquidTemplateFileName = string.Format(fileFormat, templateName);
             //If not found by current theme path try find them by base path if it is defined
             var curentThemeDiscoveryPaths = _options.TemplatesDiscoveryFolders.Select(x => Path.Combine(CurrentThemePath, x, liquidTemplateFileName));
             if (BaseThemePath != null)
@@ -255,7 +269,6 @@ namespace VirtoCommerce.LiquidThemeEngine
             }
             //Try to find template in current theme folder
             return curentThemeDiscoveryPaths.FirstOrDefault(x => _themeBlobProvider.PathExists(x));
-
         }
 
         /// <summary>
@@ -345,6 +358,18 @@ namespace VirtoCommerce.LiquidThemeEngine
 
             var result = parsedTemplate.Render(templateContext);
             return new ValueTask<string>(result);
+        }
+
+        public Dictionary<string, object> GetTemplateConfig(string viewName)
+        {
+            var settingsPath = ResolveTemplateSettingsPath(viewName);
+            if (string.IsNullOrEmpty(settingsPath))
+            {
+                return null;
+            }
+            var content = ReadTemplateByPath(settingsPath);
+            var result = JsonConvert.DeserializeObject<JObject>(content);
+            return result.ToObject<Dictionary<string, object>>().ToDictionary(x => x.Key, x => x.Value);
         }
 
         /// <summary>
