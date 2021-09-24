@@ -43,7 +43,7 @@ namespace VirtoCommerce.LiquidThemeEngine
         private readonly LiquidThemeEngineOptions _options;
         private static readonly Regex _isLiquid = new Regex("[{}|]", RegexOptions.Compiled);
         private const string _liquidTemplateFormat = "{0}.liquid";
-        private const string _settingsTemplateFormat = "{0}.template";
+        private const string _settingsTemplateFormat = "{0}.json";
         private readonly IWorkContextAccessor _workContextAccessor;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly IStorefrontMemoryCache _memoryCache;

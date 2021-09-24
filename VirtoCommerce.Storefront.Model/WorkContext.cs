@@ -283,6 +283,10 @@ namespace VirtoCommerce.Storefront.Model
         /// settings for current template
         /// </summary>
         public IDictionary<string, object> TemplateConfig { get; set; }
+        /// <summary>
+        /// used for temporary model when preview product
+        /// </summary>
+        public dynamic TemplateModel { get; set; }
 
         public string Version { get; set; }
 
