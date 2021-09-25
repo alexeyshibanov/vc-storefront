@@ -69,7 +69,7 @@ namespace VirtoCommerce.Storefront.Model.Stores
         public IList<Language> Languages { get; set; }
 
         /// <summary>
-        /// Default currency of store. 
+        /// Default currency of store.
         /// Achtung ! Do not use Currency objects here, because Store object can be cached but Currency may be changed depend on request culture.
         /// </summary>
         public string DefaultCurrencyCode { get; set; }
@@ -140,6 +140,10 @@ namespace VirtoCommerce.Storefront.Model.Stores
 
         public string CartValidationRuleSet { get; set; }
 
+        /// <summary>
+        /// Customer reviews enabled for a store
+        /// </summary>
+        public bool CustomerReviewsEnabled { get; set; }
 
         public IMutablePagedList<DynamicProperty> DynamicProperties { get; set; }
 

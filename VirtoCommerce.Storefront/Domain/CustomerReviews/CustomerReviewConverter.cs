@@ -12,12 +12,13 @@ namespace VirtoCommerce.Storefront.Domain
                 Id = itemDto.Id,
                 AuthorNickname = itemDto.AuthorNickname,
                 Content = itemDto.Content,
+                IsActive = itemDto.IsActive,
+                ProductId = itemDto.ProductId,
+
                 CreatedBy = itemDto.CreatedBy,
                 CreatedDate = itemDto.CreatedDate,
-                IsActive = itemDto.IsActive,
                 ModifiedBy = itemDto.ModifiedBy,
                 ModifiedDate = itemDto.ModifiedDate,
-                ProductId = itemDto.ProductId
             };
 
             return result;

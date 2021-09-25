@@ -244,7 +244,10 @@ namespace VirtoCommerce.Storefront.Domain
                     taskList.Add(LoadProductPaymentPlanAsync(products, workContext));
                 }
 
-                taskList.Add(LoadProductCustomerReviewsAsync(products, workContext));
+                if (workContext.CurrentStore.CustomerReviewsEnabled)
+                {
+                    taskList.Add(LoadProductCustomerReviewsAsync(products, workContext));
+                }
 
                 await Task.WhenAll(taskList.ToArray());
 
@@ -397,6 +400,7 @@ namespace VirtoCommerce.Storefront.Domain
                     var criteria = new CustomerReviewSearchCriteria
                     {
                         ProductIds = new[] { product.Id },
+                        IsActive = true,
                         PageNumber = pageNumber,
                         PageSize = pageSize,
                         Sort = SortInfo.ToString(sortInfos),

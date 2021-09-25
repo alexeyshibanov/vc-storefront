@@ -96,6 +96,8 @@ namespace VirtoCommerce.Storefront.Domain
                 result.CartValidationRuleSet = result.DynamicProperties?.GetDynamicPropertyValue("CartValidationRuleSet");
             }
 
+            result.CustomerReviewsEnabled = result.Settings.GetSettingValue("CustomerReviews.CustomerReviewsEnabled", false);
+
             return result;
         }
 
