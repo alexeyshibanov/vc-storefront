@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json;
 using VirtoCommerce.Storefront.Model.Common;
+using VirtoCommerce.Storefront.Model.CustomerReviews;
 using VirtoCommerce.Storefront.Model.Marketing;
 using VirtoCommerce.Storefront.Model.Subscriptions;
 
@@ -239,6 +240,11 @@ namespace VirtoCommerce.Storefront.Model.Catalog
         public IMutablePagedList<EditorialReview> Descriptions { get; set; }
 
         /// <summary>
+        /// Product customer reviews
+        /// </summary>
+        public IMutablePagedList<CustomerReview> CustomerReviews { get; set; }
+
+        /// <summary>
         /// Current product price
         /// </summary>
         public ProductPrice Price { get; set; }
@@ -346,7 +352,7 @@ namespace VirtoCommerce.Storefront.Model.Catalog
                 var nominalPrice = orderedPrices.FirstOrDefault();
                 //and add to nominal price other prices as tier prices
                 nominalPrice.TierPrices.AddRange(orderedPrices.Select(x => new TierPrice(x.SalePrice, x.MinQuantity ?? 1)));
-                //Add nominal price to product prices list 
+                //Add nominal price to product prices list
                 Prices.Add(nominalPrice);
             }
 

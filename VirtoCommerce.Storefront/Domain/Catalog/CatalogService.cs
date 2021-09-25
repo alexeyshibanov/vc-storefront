@@ -13,6 +13,7 @@ using VirtoCommerce.Storefront.Model.Catalog.Specifications;
 using VirtoCommerce.Storefront.Model.Common;
 using VirtoCommerce.Storefront.Model.Common.Caching;
 using VirtoCommerce.Storefront.Model.Customer.Services;
+using VirtoCommerce.Storefront.Model.CustomerReviews;
 using VirtoCommerce.Storefront.Model.Inventory.Services;
 using VirtoCommerce.Storefront.Model.Pricing.Services;
 using VirtoCommerce.Storefront.Model.Services;
@@ -33,6 +34,7 @@ namespace VirtoCommerce.Storefront.Domain
         private readonly IMemberService _customerService;
         private readonly ISubscriptionService _subscriptionService;
         private readonly IInventoryService _inventoryService;
+        private readonly ICustomerReviewService _customerReviewService;
         private readonly IStorefrontMemoryCache _memoryCache;
         private readonly IApiChangesWatcher _apiChangesWatcher;
 
@@ -45,6 +47,7 @@ namespace VirtoCommerce.Storefront.Domain
             , IMemberService customerService
             , ISubscriptionService subscriptionService
             , IInventoryService inventoryService
+            , ICustomerReviewService customerReviewService
             , IStorefrontMemoryCache memoryCache
             , IApiChangesWatcher changesWatcher
             , IStorefrontUrlBuilder storefrontUrlBuilder)
@@ -56,9 +59,10 @@ namespace VirtoCommerce.Storefront.Domain
             _searchApi = searchApi;
             _categoriesApi = categoriesApi;
             _pricingService = pricingService;
-            _inventoryService = inventoryService;
             _customerService = customerService;
             _subscriptionService = subscriptionService;
+            _inventoryService = inventoryService;
+            _customerReviewService = customerReviewService;
             _memoryCache = memoryCache;
             _apiChangesWatcher = changesWatcher;
             _storefrontUrlBuilder = storefrontUrlBuilder;
@@ -72,7 +76,7 @@ namespace VirtoCommerce.Storefront.Domain
 
             if (ids.IsNullOrEmpty())
             {
-                result = new Product[0];
+                result = Array.Empty<Product>();
             }
             else
             {
@@ -110,13 +114,13 @@ namespace VirtoCommerce.Storefront.Domain
                 return await _categoriesApi.GetCategoriesByPlentyIdsAsync(ids.ToList(), ((int)responseGroup).ToString());
             });
             var result = categoriesDto.Select(x => x.ToCategory(workContext.CurrentLanguage, workContext.CurrentStore)).ToArray();
-            //Set  lazy loading for child categories 
-            EstablishLazyDependenciesForCategories(result);        
+            //Set  lazy loading for child categories
+            EstablishLazyDependenciesForCategories(result);
             return result;
         }
 
         /// <summary>
-        /// Search categories by given criteria 
+        /// Search categories by given criteria
         /// </summary>
         /// <param name="criteria"></param>
         /// <returns></returns>
@@ -126,7 +130,7 @@ namespace VirtoCommerce.Storefront.Domain
         }
 
         /// <summary>
-        /// Async search categories by given criteria 
+        /// Async search categories by given criteria
         /// </summary>
         /// <param name="criteria"></param>
         /// <returns></returns>
@@ -150,13 +154,13 @@ namespace VirtoCommerce.Storefront.Domain
             {
                 result = new PagedList<Category>(searchResult.Items.Select(x => x.ToCategory(workContext.CurrentLanguage, workContext.CurrentStore)).AsQueryable(), criteria.PageNumber, criteria.PageSize);
             }
-            //Set  lazy loading for child categories 
+            //Set  lazy loading for child categories
             EstablishLazyDependenciesForCategories(result.ToArray());
             return result;
         }
 
         /// <summary>
-        /// Search products by given criteria 
+        /// Search products by given criteria
         /// </summary>
         /// <param name="criteria"></param>
         /// <returns></returns>
@@ -166,7 +170,7 @@ namespace VirtoCommerce.Storefront.Domain
         }
 
         /// <summary>
-        /// Async search products by given criteria 
+        /// Async search products by given criteria
         /// </summary>
         /// <param name="criteria"></param>
         /// <returns></returns>
@@ -189,7 +193,7 @@ namespace VirtoCommerce.Storefront.Domain
             {
                 Products = new MutablePagedList<Product>(products, criteria.PageNumber, criteria.PageSize, (int?)result.TotalCount ?? 0),
                 Aggregations = !result.Aggregations.IsNullOrEmpty() ? result.Aggregations.Select(x => x.ToAggregation(workContext.CurrentLanguage.CultureName))
-                                                                                         .Where(x => aggrIsVisbileSpec.IsSatisfiedBy(x))                                                                                         
+                                                                                         .Where(x => aggrIsVisbileSpec.IsSatisfiedBy(x))
                                                                                          .ToArray() : new Aggregation[] { }
             };
             //Post loading initialization of the resulting aggregations
@@ -203,7 +207,7 @@ namespace VirtoCommerce.Storefront.Domain
                 aggrContext.CategoryByIdDict = (await GetCategoriesAsync(aggrItemCatIds, CategoryResponseGroup.Info))
                                                             .Distinct().ToDictionary(x => x.Id)
                                                             .WithDefaultValue(null);
-            }          
+            }
             searchResult.Aggregations.Apply(x => x.PostLoadInit(aggrContext));
             return searchResult;
         }
@@ -239,6 +243,8 @@ namespace VirtoCommerce.Storefront.Domain
                 {
                     taskList.Add(LoadProductPaymentPlanAsync(products, workContext));
                 }
+
+                taskList.Add(LoadProductCustomerReviewsAsync(products, workContext));
 
                 await Task.WhenAll(taskList.ToArray());
 
@@ -313,7 +319,6 @@ namespace VirtoCommerce.Storefront.Domain
             }
         }
 
-      
         protected virtual async Task LoadProductInventoriesAsync(List<Product> products, WorkContext workContext)
         {
             await _inventoryService.EvaluateProductInventoriesAsync(products, workContext);
@@ -337,7 +342,7 @@ namespace VirtoCommerce.Storefront.Domain
 
             foreach (var product in products)
             {
-                //Associations 
+                //Associations
                 product.Associations = new MutablePagedList<ProductAssociation>((pageNumber, pageSize, sortInfos, @params) =>
                 {
                     var criteria = new ProductAssociationSearchCriteria
@@ -377,6 +382,30 @@ namespace VirtoCommerce.Storefront.Domain
             return Task.CompletedTask;
         }
 
+        private Task LoadProductCustomerReviewsAsync(List<Product> products, WorkContext workContext)
+        {
+            if (products == null)
+            {
+                throw new ArgumentNullException(nameof(products));
+            }
+
+            foreach (var product in products)
+            {
+                //Lazy loading for customer reviews
+                product.CustomerReviews = new MutablePagedList<CustomerReview>((pageNumber, pageSize, sortInfos) =>
+                {
+                    var criteria = new CustomerReviewSearchCriteria
+                    {
+                        ProductIds = new[] { product.Id },
+                        PageNumber = pageNumber,
+                        PageSize = pageSize,
+                        Sort = SortInfo.ToString(sortInfos),
+                    };
+                    return _customerReviewService.SearchReviews(criteria);
+                }, 1, CustomerReviewSearchCriteria.DefaultPageSize);
+            }
+            return Task.CompletedTask;
+        }
         protected virtual void EstablishLazyDependenciesForCategories(IEnumerable<Category> categories)
         {
             if (categories == null)
@@ -425,7 +454,7 @@ namespace VirtoCommerce.Storefront.Domain
             foreach (var product in products.Where(x => !string.IsNullOrEmpty(x.CategoryId)))
             {
                 product.Category = new Lazy<Category>(() => GetCategories(new[] { product.CategoryId }, CategoryResponseGroup.Small).FirstOrDefault());
-            }            
+            }
         }
     }
 }

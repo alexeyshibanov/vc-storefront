@@ -42,6 +42,7 @@ using VirtoCommerce.Storefront.Model.Common;
 using VirtoCommerce.Storefront.Model.Common.Bus;
 using VirtoCommerce.Storefront.Model.Common.Events;
 using VirtoCommerce.Storefront.Model.Customer.Services;
+using VirtoCommerce.Storefront.Model.CustomerReviews;
 using VirtoCommerce.Storefront.Model.Features;
 using VirtoCommerce.Storefront.Model.Inventory.Services;
 using VirtoCommerce.Storefront.Model.LinkList.Services;
@@ -58,7 +59,6 @@ using VirtoCommerce.Storefront.Model.Subscriptions.Services;
 using VirtoCommerce.Storefront.Model.Tax.Services;
 using VirtoCommerce.Storefront.Routing;
 using VirtoCommerce.Tools;
-using SameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode;
 
 namespace VirtoCommerce.Storefront
 {
@@ -97,6 +97,7 @@ namespace VirtoCommerce.Storefront
             services.AddSingleton<IQuoteService, QuoteService>();
             services.AddSingleton<ISubscriptionService, SubscriptionService>();
             services.AddSingleton<ICatalogService, CatalogService>();
+            services.AddSingleton<ICustomerReviewService, CustomerReviewService>();
             services.AddSingleton<IInventoryService, InventoryService>();
             services.AddSingleton<IPricingService, PricingService>();
             services.AddSingleton<ITaxEvaluator, TaxEvaluator>();
@@ -181,9 +182,9 @@ namespace VirtoCommerce.Storefront
             services.AddSingleton<IAuthorizationHandler, CanReadContentItemAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, OnlyRegisteredUserAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, AnonymousUserForStoreAuthorizationHandler>();
-            // register the AuthorizationPolicyProvider which dynamically registers authorization policies for each permission defined in the platform 
+            // register the AuthorizationPolicyProvider which dynamically registers authorization policies for each permission defined in the platform
             services.AddSingleton<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
-            //Storefront authorization handler for policy based on permissions 
+            //Storefront authorization handler for policy based on permissions
             services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, CanEditOrganizationResourceAuthorizationHandler>();
             services.AddSingleton<IAuthorizationHandler, CanAccessOrderAuthorizationHandler>();
@@ -376,7 +377,7 @@ namespace VirtoCommerce.Storefront
                 app.UseExceptionHandler("/error/500");
                 app.UseHsts();
             }
-            // Do not write telemetry to debug output 
+            // Do not write telemetry to debug output
             TelemetryDebugWriter.IsTracingDisabled = true;
 
             app.UseResponseCaching();
