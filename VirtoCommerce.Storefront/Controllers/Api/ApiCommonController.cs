@@ -127,8 +127,9 @@ namespace VirtoCommerce.Storefront.Controllers.Api
                     else if (contentDisposition.IsFileDisposition())
                     {
                         // Don't trust the file name sent by the client. To display the file name, HTML-encode the value.
-                        var trustedFileName =
-                            $"{WebUtility.HtmlEncode(contentDisposition.FileName.Value)}_{DateTime.UtcNow.Ticks:X16}";
+                        var trustedFileName = WebUtility.HtmlEncode(contentDisposition.FileName.Value);
+                        trustedFileName =
+                            $"{Path.GetFileNameWithoutExtension(trustedFileName)}_{DateTime.UtcNow.Ticks:X16}{Path.GetExtension(trustedFileName)}";
 
                         var fileContent = new ByteArrayContent(
                             await MultipartRequestHelper.ProcessStreamedFile(section, contentDisposition,
