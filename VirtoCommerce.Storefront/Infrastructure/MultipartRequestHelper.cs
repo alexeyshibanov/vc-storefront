@@ -80,7 +80,7 @@ namespace VirtoCommerce.Storefront.Infrastructure
                 MediaTypeHeaderValue.TryParse(section.ContentType, out var mediaType);
 
             // UTF-7 is insecure and shouldn't be honored. UTF-8 succeeds in most cases.
-            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType.Encoding) || mediaType.Encoding == null)
+            if (!hasMediaTypeHeader || Encoding.UTF7.Equals(mediaType.Encoding))
             {
                 return Encoding.UTF8;
             }

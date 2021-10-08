@@ -21,6 +21,7 @@ namespace VirtoCommerce.Storefront.Filters
 
         public void OnResourceExecuted(ResourceExecutedContext context)
         {
+            // No need to do something
         }
     }
 }

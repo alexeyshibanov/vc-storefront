@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features;
@@ -77,7 +78,9 @@ namespace VirtoCommerce.Storefront.Controllers.Api
             return Ok();
         }
 
-        // POST: storefrontapi/customnotification?formType=...&blobFolderUrl=...
+        // POST: storefrontapi/customnotification?formType=...
+        // Don't validate antiforgery token otherwise MultipartReader generate the exception
+        // "Unexpected end of Stream, the content may have already been read by another component."
         [HttpPost("customnotification")]
         [IgnoreAntiforgeryToken]
         [DisableFormValueModelBinding]
@@ -101,40 +104,38 @@ namespace VirtoCommerce.Storefront.Controllers.Api
                 var section = await reader.ReadNextSectionAsync();
                 while (section != null)
                 {
-                    var hasContentDispositionHeader = ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition);
-                    if (hasContentDispositionHeader)
+                    if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
                     {
-                        if (contentDisposition.IsFormDisposition())
-                        {
-                            // Don't limit the key name length because the
-                            // multipart headers length limit is already in effect.
-                            var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name).Value;
-                            var encoding = MultipartRequestHelper.GetEncoding(section);
-                            if (encoding == null)
-                            {
-                                return BadRequest("The request couldn't be processed. Content disposition encoding not defined.");
-                            }
+                        continue;
+                    }
 
-                            using var streamReader = new StreamReader(section.Body, encoding, true, 1024, true);
-                            // The value length limit is enforced by MultipartBodyLengthLimit
-                            var value = await streamReader.ReadToEndAsync();
-                            if (!string.IsNullOrWhiteSpace(value))
-                            {
-                                model.Contact.Add(key, new[] { value });
-                            }
-                        }
-                        else if (contentDisposition.IsFileDisposition())
-                        {
-                            // Don't trust the file name sent by the client. To display the file name, HTML-encode the value.
-                            var trustedFileName = WebUtility.HtmlEncode(contentDisposition.FileName.Value);
+                    if (contentDisposition.IsFormDisposition())
+                    {
+                        // Don't limit the key name length because the
+                        // multipart headers length limit is already in effect.
+                        var key = HeaderUtilities.RemoveQuotes(contentDisposition.Name).Value;
+                        var encoding = MultipartRequestHelper.GetEncoding(section) ?? Encoding.UTF8;
 
-                            var fileContent = new ByteArrayContent(
-                                await MultipartRequestHelper.ProcessStreamedFile(section, contentDisposition,
-                                    _formFileStorageOptions.PermittedExtensions, _formFileStorageOptions.FileSizeLimit));
-                            fileContent.Headers.ContentType =
-                                System.Net.Http.Headers.MediaTypeHeaderValue.Parse("multipart/form-data");
-                            sendForm.Add(fileContent, "file", Path.GetFileName(trustedFileName));
+                        using var streamReader = new StreamReader(section.Body, encoding, true, 1024, true);
+                        // The value length limit is enforced by MultipartBodyLengthLimit
+                        var value = await streamReader.ReadToEndAsync();
+                        if (!string.IsNullOrWhiteSpace(value))
+                        {
+                            model.Contact.Add(key, new[] { value });
                         }
+                    }
+                    else if (contentDisposition.IsFileDisposition())
+                    {
+                        // Don't trust the file name sent by the client. To display the file name, HTML-encode the value.
+                        var trustedFileName =
+                            $"{WebUtility.HtmlEncode(contentDisposition.FileName.Value)}_{DateTime.UtcNow.Ticks:X16}";
+
+                        var fileContent = new ByteArrayContent(
+                            await MultipartRequestHelper.ProcessStreamedFile(section, contentDisposition,
+                                _formFileStorageOptions.PermittedExtensions, _formFileStorageOptions.FileSizeLimit));
+                        fileContent.Headers.ContentType =
+                            System.Net.Http.Headers.MediaTypeHeaderValue.Parse("multipart/form-data");
+                        sendForm.Add(fileContent, "file", Path.GetFileName(trustedFileName));
                     }
 
                     // Drain any remaining section body that hasn't been consumed and
@@ -145,12 +146,9 @@ namespace VirtoCommerce.Storefront.Controllers.Api
                 if (sendForm.Any())
                 {
                     var blobs = await UploadAssetAsync(sendForm);
-                    if (blobs != null && blobs.Count != 0)
+                    foreach (var blob in blobs)
                     {
-                        foreach (var blob in blobs)
-                        {
-                            model.Contact.Add("File", new[] { blob.Url });
-                        }
+                        model.Contact.Add("File", new[] { blob.Url });
                     }
                 }
 
@@ -181,9 +179,6 @@ namespace VirtoCommerce.Storefront.Controllers.Api
             // Create HTTP transport objects
             using var httpRequest = new HttpRequestMessage(HttpMethod.Post, url);
             httpRequest.Content = content;
-
-            // Serialize Request
-            string requestContent = null;
             // Set Credentials
             if (_platformModuleClient.Credentials != null)
             {
@@ -197,7 +192,7 @@ namespace VirtoCommerce.Storefront.Controllers.Api
 
             cancellationToken.ThrowIfCancellationRequested();
             string responseContent = null;
-            if ((int)statusCode != 200 && (int)statusCode != 401 && (int)statusCode != 403)
+            if ((int)statusCode != 200)
             {
                 var ex = new HttpOperationException($"Operation returned an invalid status code '{statusCode}'");
                 if (httpResponse.Content != null) {
@@ -206,15 +201,11 @@ namespace VirtoCommerce.Storefront.Controllers.Api
                 else {
                     responseContent = string.Empty;
                 }
-                ex.Request = new HttpRequestMessageWrapper(httpRequest, requestContent);
+                ex.Request = new HttpRequestMessageWrapper(httpRequest, null);
                 ex.Response = new HttpResponseMessageWrapper(httpResponse, responseContent);
                 throw ex;
             }
 
-            if ((int)statusCode != 200)
-            {
-                return null;
-            }
             // Deserialize Response
             responseContent = await httpResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
             try
