@@ -80,6 +80,7 @@ namespace VirtoCommerce.Storefront
             services.AddResponseCaching();
 
             services.Configure<StorefrontOptions>(Configuration.GetSection("VirtoCommerce"));
+            services.Configure<FormFileStorageOptions>(Configuration.GetSection(FormFileStorageOptions.SectionName));
 
             //The IHttpContextAccessor service is not registered by default
             //https://github.com/aspnet/Hosting/issues/793
